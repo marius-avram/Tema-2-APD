@@ -1,0 +1,70 @@
+AVRAM Marius 334CB 
+Tema 2 APD - Indexarea Documentelor folosind paradigma Map-Reduce
+
+Pentru rezolvarea temei am pornit de la scheletul de laborator folosit in 
+laboratorul 5 (Modelul Replicated-Workers). Singura modificare pe care am adus-o
+acelui concept a fost transformarea clasei PartialSolution intr-o interfata ce 
+are metoda abstracta execute. 
+
+Astfel in functie de taskul pe care trebuie sa il efectuez am creat doua clase
+ce implementeaza PartialSolution, respectiv implementeaza metoda abstracta.
+Astfel workerii apeleaza executarea sarcinii in care taskul este specializat, 
+fara a fi constient propriu-zis de specializarea acestuia. In acest mod am 
+evitat crearea a doua tipuri de workeri.
+
+Clasa de tip MapTask primeste numele unui fisier, offsetul de inceput de unde
+acesta trebuie sa inceapa sa citeasca si offsetul de sfarsit (adica locul pana 
+unde trebuie sa continue citirea). Aceasta citire se realizeaza cu 
+RandomAccessFile intr-o singura operatie de read. Pentru toate fragmentele, 
+cu exceptia celui de la sfarsitul fisierului, citirea contiuna si dincolo de 
+fragment pana cand se intalneste un separator. Aceasta citire se face 
+caracter cu caracter pentru ca nu se stie exact pana unde aceasta citire trebuie 
+sa continue. De asemenea pentru toate fragmentele cu exceptia primului fragment
+se ingnora toate caracterele pana la intalnirea primului separator dupa care
+urmeaza un caracter cea nu este un separator. In acest mod citirea se realizeaza
+in paralel si se evita suprasolicitarea threadului master cu citirea unui fisier
+mare si stocarea acestuia intr-un String.
+
+Rezultatele operatiei sunt puse intr-un HashMap ce se gaseste in clasa 
+Main. Hashmapul contine pentru fiecare fisier(cheia) un vector cu perechi de
+tipul (cuvant, nr. de aparitii). Aceste perechi sunt puse separat in functie de 
+fragmentul din care au facut parte, intr-un alt hashmap. Astfel avem un 
+HashMap<String, Vector<HashMap<String, Integer>>>. Se foloseste un Vector 
+pentru ca acesta este thread-safe si permite scrierea de catre mai multe 
+threaduri in el.
+
+Initial am dorit sa tin toate cuvintele intr-un singur Vector. Adica sa am o 
+structura de tip HashMap<String, Vector<String>>. Insa astfel numararea ar fi 
+avut loc in totalitate in taskul de tip reduce si m-as fi abatut putin de la 
+enutul temei. 
+
+Dupa terminarea tuturor operatiilor de tip map in Main se creeaza noi workeri ce
+primeste un workpool in care se afla taskuri de tip ReduceTask. Acestea contin 
+numele fisierului pentru care fac reducerea si lista de cuvinte. Lista de 
+cuvinte contine toate cuvintele din fisier. 
+Astfel se vor efectua cele doua operatii de tip reduce. Numararea frecventei 
+cuvintelor se face la nivel de fisier. Fiecare ReduceTask contine un map 
+<cuvant, frecventa>. In acest mod se poate face o numarare eficienta cuvintelor. 
+
+Dupa pastrarea primelor N cuvinte din Map dupa frecventa se trece la a doua
+operatie de tip map si anume cea in care se determina daca cuvintele cheie se 
+gasesc in primele N cuvinte. Se calculeaza si frecventele fiecarui cuvant cheie 
+in cazul in care conditia este indeplinita. 
+
+In Worker se pastreaza doar fisierele care contin in top cuvintele cautate. Aici 
+se pastreaza toate fara a tine cont de parametrul X. Abia in main se parcurge
+lista de fisiere in ordinea in care au fost primite al inceputul programului si
+se verifica daca se gasesc in top. Daca se gasesc se afiseaza in fisierul de
+iesire impreuna cu frecventele lor.
+
+Fisierele sursa:
+Main.java
+WorkPool.java
+ReplicateWorkers.java
+MapTask.java
+ReduceTask.java
+
+Pentru mai multe detalii despre implementare verificati codul sursa si 
+comentariile din cod.
+
+Arhiva contine si un fisier Makefile.
